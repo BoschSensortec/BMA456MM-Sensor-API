@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bma456mm.h
-* @date       2021-07-15
-* @version    V2.20.3
+* @date       2021-08-06
+* @version    V2.20.4
 *
 */
 
@@ -871,6 +871,9 @@ int8_t bma456mm_get_remap_axes(struct bma4_remap *remap_data, struct bma4_dev *d
  *                                 |        Enables the feature on a per-axis
  *         axis_en                 |        basis.
  * ---------------------------------------------------------------------------
+ *                                 |        Configuration for acceleration
+ *          slope                  |        scope computation.
+ * ---------------------------------------------------------------------------
  * @endverbatim
  *
  *@verbatim
@@ -924,6 +927,9 @@ int8_t bma456mm_set_any_mot_config(const struct bma456mm_any_no_mot_config *any_
  * --------------------------------|-----------------------------------------
  *                                 |        Enables the feature on a per-axis
  *         axis_en                 |        basis.
+ * ---------------------------------------------------------------------------
+ *                                 |        Configuration for acceleration
+ *          slope                  |        scope computation.
  * ---------------------------------------------------------------------------
  * @endverbatim
  *
@@ -1414,6 +1420,9 @@ int8_t bma456mm_get_auto_low_power_state(uint8_t *auto_low_power_state, struct b
  *                                 |        exceeded; default value 4 = 20 msec.
  *                                 |        Range is 0 to 20sec.
  * --------------------------------|----------------------------------------
+ *                                 |        Enables the feature on a per-axis
+ *         axis_en                 |        basis.
+ * ---------------------------------------------------------------------------
  *@endverbatim
  *
  *  @param[in] dev : Structure instance of bma4_dev
@@ -1459,6 +1468,9 @@ int8_t bma456mm_set_high_g_config(const struct bma456mm_high_g_config *high_g, s
  *                                 |        exceeded; default value 4 = 20 msec.
  *                                 |        Range is 0 to 20sec.
  * --------------------------------|----------------------------------------
+ *                                 |        Enables the feature on a per-axis
+ *         axis_en                 |        basis.
+ * ---------------------------------------------------------------------------
  *@endverbatim
  *
  *  @param[in] dev : Structure instance of bma4_dev

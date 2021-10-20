@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bma456mm.c
-* @date       2021-07-15
-* @version    V2.20.3
+* @date       2021-08-06
+* @version    V2.20.4
 *
 */
 
@@ -557,13 +557,13 @@ int8_t bma456mm_get_version_config(uint16_t *config_major, uint16_t *config_mino
     {
         rslt = bma4_set_advance_power_save(BMA4_DISABLE, dev);
 
-        /* Wait for sensor time synchronization. Refer the data-sheet for
-         * more information
-         */
-        dev->delay_us(450, dev->intf_ptr);
-
         if (rslt == BMA4_OK)
         {
+            /* Wait for sensor time synchronization. Refer the data-sheet for
+             * more information
+             */
+            dev->delay_us(450, dev->intf_ptr);
+
             /* Get config file identification from the sensor */
             rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
 
@@ -1677,41 +1677,35 @@ int8_t bma456mm_set_sig_motion_config(const struct bma456mm_sig_motion_config *s
     uint16_t skiptime = 0;
     int8_t rslt = BMA4_OK;
 
-    if (dev != NULL)
+    if (sig_motion != NULL)
     {
-        if (dev->chip_id == BMA456MM_CHIP_ID)
+        rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
+
+        if (rslt == BMA4_OK)
         {
-            rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
-            if (rslt == BMA4_OK)
-            {
-                /* Assigns threshold value */
-                feature_config[index++] = BMA4_GET_LSB(sig_motion->threshold);
-                feature_config[index++] = BMA4_GET_MSB(sig_motion->threshold);
+            /* Assigns threshold value */
+            feature_config[index++] = BMA4_GET_LSB(sig_motion->threshold);
+            feature_config[index++] = BMA4_GET_MSB(sig_motion->threshold);
 
-                /* Gets skip time data bytes and sets only
-                 * skip time bits
-                 */
-                skiptime_lsb = feature_config[index];
-                skiptime_msb = feature_config[index + 1] << 8;
-                skiptime = skiptime_lsb | skiptime_msb;
-                skiptime = BMA4_SET_BITS_POS_0(skiptime, BMA456MM_SIG_MOTION_SKIPTIME, sig_motion->skiptime);
+            /* Gets skip time data bytes and sets only
+             * skip time bits
+             */
+            skiptime_lsb = feature_config[index];
+            skiptime_msb = feature_config[index + 1] << 8;
+            skiptime = skiptime_lsb | skiptime_msb;
+            skiptime = BMA4_SET_BITS_POS_0(skiptime, BMA456MM_SIG_MOTION_SKIPTIME, sig_motion->skiptime);
 
-                /* Assigns skip time value */
-                feature_config[index++] = BMA4_GET_LSB(skiptime);
-                feature_config[index++] = BMA4_GET_MSB(skiptime);
+            /* Assigns skip time value */
+            feature_config[index++] = BMA4_GET_LSB(skiptime);
+            feature_config[index++] = BMA4_GET_MSB(skiptime);
 
-                /* Assigns proof time value */
-                feature_config[index] = sig_motion->prooftime & BMA456MM_SIG_MOTION_PROOFTIME_MSK;
+            /* Assigns proof time value */
+            feature_config[index] = sig_motion->prooftime & BMA456MM_SIG_MOTION_PROOFTIME_MSK;
 
-                /* Writes significant motion settings
-                 * in the sensor
-                 */
-                rslt = bma4_write_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
-            }
-        }
-        else
-        {
-            rslt = BMA4_E_INVALID_SENSOR;
+            /* Writes significant motion settings
+             * in the sensor
+             */
+            rslt = bma4_write_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
         }
     }
     else
@@ -1731,29 +1725,23 @@ int8_t bma456mm_get_sig_motion_config(struct bma456mm_sig_motion_config *sig_mot
     uint16_t *data_p = (uint16_t *)(void *)feature_config;
     int8_t rslt = BMA4_OK;
 
-    if (dev != NULL)
+    if (sig_motion != NULL)
     {
-        if (dev->chip_id == BMA456MM_CHIP_ID)
+        rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
+
+        if (rslt == BMA4_OK)
         {
-            rslt = bma4_read_regs(BMA4_FEATURE_CONFIG_ADDR, feature_config, BMA456MM_FEATURE_SIZE, dev);
-            if (rslt == BMA4_OK)
-            {
-                /* To convert 8bit to 16 bit address */
-                data_p = data_p + BMA456MM_SIG_MOTION_OFFSET / 2;
+            /* To convert 8bit to 16 bit address */
+            data_p = data_p + BMA456MM_SIG_MOTION_OFFSET / 2;
 
-                /* Extracts threshold value */
-                sig_motion->threshold = (*(data_p++)) & BMA456MM_SIG_MOTION_THRES_MSK;
+            /* Extracts threshold value */
+            sig_motion->threshold = (*(data_p++)) & BMA456MM_SIG_MOTION_THRES_MSK;
 
-                /* Extracts skip time value */
-                sig_motion->skiptime = (*(data_p++)) & BMA456MM_SIG_MOTION_SKIPTIME_MSK;
+            /* Extracts skip time value */
+            sig_motion->skiptime = (*(data_p++)) & BMA456MM_SIG_MOTION_SKIPTIME_MSK;
 
-                /* Extracts proof time value */
-                sig_motion->prooftime = (uint8_t)((*data_p) & BMA456MM_SIG_MOTION_PROOFTIME_MSK);
-            }
-        }
-        else
-        {
-            rslt = BMA4_E_INVALID_SENSOR;
+            /* Extracts proof time value */
+            sig_motion->prooftime = (uint8_t)((*data_p) & BMA456MM_SIG_MOTION_PROOFTIME_MSK);
         }
     }
     else

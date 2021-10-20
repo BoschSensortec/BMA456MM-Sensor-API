@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bma4.c
-* @date       2021-07-15
-* @version    V2.20.3
+* @date       2021-08-06
+* @version    V2.20.4
 *
 */
 
@@ -655,6 +655,19 @@ static void receive_remap_axis(uint8_t remap_axis, uint8_t remap_sign, uint8_t *
  * @retval None
  */
 static void get_remapped_data(struct bma4_accel *data, const struct bma4_dev *dev);
+
+/*!
+ * @brief This API performs the steps needed for Self test operation
+ *  before reading the Accel Self test data.
+ *
+ * @param[in] sign: Variable used to specify the self test sign
+ * @param[in] dev : Structure instance of bma4_dev
+ *
+ * @return Result of API execution status
+ * @retval 0 -> Success
+ * @retval < 0 -> Fail
+ */
+static int8_t selftest_config(uint8_t sign, struct bma4_dev *dev);
 
 /*!
  * @brief This internal API brings up the secondary interface to access
@@ -1493,34 +1506,6 @@ int8_t bma4_get_error_status(struct bma4_err_reg *err_reg, struct bma4_dev *dev)
 
             /* Mag data ready error*/
             err_reg->aux_err = BMA4_GET_BITSLICE(data, BMA4_AUX_ERR);
-        }
-    }
-    else
-    {
-        rslt = BMA4_E_NULL_PTR;
-    }
-
-    return rslt;
-}
-
-/*!
- *  @brief This API reads the sensor status from the sensor.
- */
-int8_t bma4_get_status(uint8_t *status, struct bma4_dev *dev)
-{
-    int8_t rslt;
-    uint8_t data = 0;
-
-    /* Check the dev structure as NULL */
-    rslt = null_pointer_check(dev);
-
-    if ((rslt == BMA4_OK) && (status != NULL))
-    {
-        /* Read the error codes*/
-        rslt = bma4_read_regs(BMA4_STATUS_ADDR, &data, 1, dev);
-        if (rslt == BMA4_OK)
-        {
-            *status = data;
         }
     }
     else
@@ -3221,63 +3206,6 @@ int8_t bma4_set_if_mode(uint8_t if_mode, struct bma4_dev *dev)
 }
 
 /*!
- *  @brief This API reads the data ready status of Accel from the sensor.
- */
-int8_t bma4_get_accel_data_rdy(uint8_t *data_rdy, struct bma4_dev *dev)
-{
-    int8_t rslt;
-    uint8_t data = 0;
-
-    /* Check the dev structure as NULL */
-    rslt = null_pointer_check(dev);
-
-    if ((rslt == BMA4_OK) && (data_rdy != NULL))
-    {
-        /*Reads the status of Accel data ready*/
-        rslt = bma4_read_regs(BMA4_STATUS_ADDR, &data, 1, dev);
-        if (rslt == BMA4_OK)
-        {
-            *data_rdy = BMA4_GET_BITSLICE(data, BMA4_STAT_DATA_RDY_ACCEL);
-        }
-    }
-    else
-    {
-        rslt = BMA4_E_NULL_PTR;
-    }
-
-    return rslt;
-}
-
-/*!
- *  @brief This API reads the data ready status of Mag from the sensor.
- *  The status get reset when Mag data register is read.
- */
-int8_t bma4_get_mag_data_rdy(uint8_t *data_rdy, struct bma4_dev *dev)
-{
-    int8_t rslt;
-    uint8_t data = 0;
-
-    /* Check the dev structure as NULL */
-    rslt = null_pointer_check(dev);
-
-    if ((rslt == BMA4_OK) && (data_rdy != NULL))
-    {
-        /*Reads the status of Accel data ready*/
-        rslt = bma4_read_regs(BMA4_STATUS_ADDR, &data, 1, dev);
-        if (rslt == BMA4_OK)
-        {
-            *data_rdy = BMA4_GET_BITSLICE(data, BMA4_STAT_DATA_RDY_MAG);
-        }
-    }
-    else
-    {
-        rslt = BMA4_E_NULL_PTR;
-    }
-
-    return rslt;
-}
-
-/*!
  *  @brief This API reads the ASIC status from the sensor.
  *  The status information is mentioned in the below table.
  */
@@ -3393,7 +3321,7 @@ int8_t bma4_perform_accel_selftest(int8_t *result, struct bma4_dev *dev)
             /* Wait for 2ms after accel self-test config please refer data sheet data sheet 4.9. sensor self-test */
             dev->delay_us(BMA4_MS_TO_US(2), dev->intf_ptr);
 
-            rslt = bma4_selftest_config(BMA4_ENABLE, dev);
+            rslt = selftest_config(BMA4_ENABLE, dev);
 
             if (rslt == BMA4_OK)
             {
@@ -3407,7 +3335,7 @@ int8_t bma4_perform_accel_selftest(int8_t *result, struct bma4_dev *dev)
 
                 if (rslt == BMA4_OK)
                 {
-                    rslt = bma4_selftest_config(BMA4_DISABLE, dev);
+                    rslt = selftest_config(BMA4_DISABLE, dev);
 
                     if (rslt == BMA4_OK)
                     {
@@ -3471,59 +3399,6 @@ static int8_t get_accel_data_difference_and_validate(struct bma4_accel positive,
 }
 
 /*! @endcond */
-
-/*!
- *  @brief This API performs the steps needed for self-test operation
- *  before reading the Accel self-test data.
- */
-int8_t bma4_selftest_config(uint8_t sign, struct bma4_dev *dev)
-{
-    int8_t rslt;
-
-    /* NULL pointer check */
-    rslt = null_pointer_check(dev);
-
-    if (rslt == BMA4_OK)
-    {
-        rslt = set_accel_selftest_enable(BMA4_ENABLE, dev);
-
-        if (rslt == BMA4_OK)
-        {
-            rslt = set_accel_selftest_sign(sign, dev);
-
-            if (rslt == BMA4_OK)
-            {
-                /* Set self-test amplitude based on variant */
-                switch (dev->variant)
-                {
-                    case BMA42X_VARIANT:
-
-                        /* Set self-test amplitude to high for BMA42x */
-                        rslt = set_accel_selftest_amp(BMA4_ENABLE, dev);
-                        break;
-
-                    case BMA42X_B_VARIANT:
-
-                        /* Set self-test amplitude to low for BMA42x_B */
-                        rslt = set_accel_selftest_amp(BMA4_DISABLE, dev);
-                        break;
-
-                    case BMA45X_VARIANT:
-
-                        /* Set self-test amplitude to low for BMA45x */
-                        rslt = set_accel_selftest_amp(BMA4_DISABLE, dev);
-                        break;
-
-                    default:
-                        rslt = BMA4_E_INVALID_SENSOR;
-                        break;
-                }
-            }
-        }
-    }
-
-    return rslt;
-}
 
 /*!
  *  @brief API sets the interrupt to either interrupt1 or
@@ -3859,50 +3734,6 @@ int8_t bma4_read_int_status(uint16_t *int_status, struct bma4_dev *dev)
             *int_status = data[0];
             *((uint8_t *)int_status + 1) = data[1];
         }
-    }
-    else
-    {
-        rslt = BMA4_E_NULL_PTR;
-    }
-
-    return rslt;
-}
-
-/*!
- *  @brief This API reads the Feature interrupt status from the sensor.
- */
-int8_t bma4_read_int_status_0(uint8_t *int_status_0, struct bma4_dev *dev)
-{
-    int8_t rslt;
-
-    /* Check the dev structure as NULL */
-    rslt = null_pointer_check(dev);
-
-    if ((rslt == BMA4_OK) && (int_status_0 != NULL))
-    {
-        rslt = bma4_read_regs(BMA4_INT_STAT_0_ADDR, int_status_0, 1, dev);
-    }
-    else
-    {
-        rslt = BMA4_E_NULL_PTR;
-    }
-
-    return rslt;
-}
-
-/*!
- *  @brief This API reads the Hardware interrupt status from the sensor.
- */
-int8_t bma4_read_int_status_1(uint8_t *int_status_1, struct bma4_dev *dev)
-{
-    int8_t rslt;
-
-    /* Check the dev structure as NULL */
-    rslt = null_pointer_check(dev);
-
-    if ((rslt == BMA4_OK) && (int_status_1 != NULL))
-    {
-        rslt = bma4_read_regs(BMA4_INT_STAT_1_ADDR, int_status_1, 1, dev);
     }
     else
     {
@@ -5446,7 +5277,7 @@ static int8_t perform_accel_foc(const struct bma4_accel_foc_g_value *accel_g_val
             {
                 /* 20ms delay for 50Hz ODR */
                 dev->delay_us(BMA4_MS_TO_US(20), dev->intf_ptr);
-                rslt = bma4_get_status(&reg_status, dev);
+                rslt = bma4_read_regs(BMA4_STATUS_ADDR, &reg_status, 1, dev);
                 try_cnt--;
             }
 
@@ -5968,4 +5799,57 @@ static void get_remapped_data(struct bma4_accel *data, const struct bma4_dev *de
     {
         data->z = (int16_t)(remap_data[dev->remap.z_axis] * neg_multiplier);
     }
+}
+
+/*!
+ *  @brief This API performs the steps needed for self-test operation
+ *  before reading the Accel self-test data.
+ */
+static int8_t selftest_config(uint8_t sign, struct bma4_dev *dev)
+{
+    int8_t rslt;
+
+    /* NULL pointer check */
+    rslt = null_pointer_check(dev);
+
+    if (rslt == BMA4_OK)
+    {
+        rslt = set_accel_selftest_enable(BMA4_ENABLE, dev);
+
+        if (rslt == BMA4_OK)
+        {
+            rslt = set_accel_selftest_sign(sign, dev);
+
+            if (rslt == BMA4_OK)
+            {
+                /* Set self-test amplitude based on variant */
+                switch (dev->variant)
+                {
+                    case BMA42X_VARIANT:
+
+                        /* Set self-test amplitude to high for BMA42x */
+                        rslt = set_accel_selftest_amp(BMA4_ENABLE, dev);
+                        break;
+
+                    case BMA42X_B_VARIANT:
+
+                        /* Set self-test amplitude to low for BMA42x_B */
+                        rslt = set_accel_selftest_amp(BMA4_DISABLE, dev);
+                        break;
+
+                    case BMA45X_VARIANT:
+
+                        /* Set self-test amplitude to low for BMA45x */
+                        rslt = set_accel_selftest_amp(BMA4_DISABLE, dev);
+                        break;
+
+                    default:
+                        rslt = BMA4_E_INVALID_SENSOR;
+                        break;
+                }
+            }
+        }
+    }
+
+    return rslt;
 }

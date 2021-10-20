@@ -31,8 +31,8 @@
 * POSSIBILITY OF SUCH DAMAGE.
 *
 * @file       bma4_defs.h
-* @date       2021-07-15
-* @version    V2.20.3
+* @date       2021-08-06
+* @version    V2.20.4
 *
 */
 
